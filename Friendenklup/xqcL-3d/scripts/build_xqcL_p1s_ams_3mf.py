@@ -205,9 +205,13 @@ def model_xml(objects, build_mode: str, *, bambu_meta: bool = False, assembly_ob
     meta_lines: list[str] = []
     if bambu_meta:
         # This is the key signal used by Bambu Studio’s importer to treat a 3MF
-        # as a Bambu-generated project (otherwise it may show the warning and
-        # fall back to geometry-only import).
-        meta_lines.append('  <metadata name="Application">BambuStudio-1.9.0</metadata>')
+        # as a Bambu-generated project.
+        #
+        # IMPORTANT: Newer Bambu Studio builds may refuse to load config from
+        # very old generator versions and fall back to geometry-only import.
+        # So we use a modern-looking 4-part version string (matching files
+        # shipped in the BambuStudio repo resources).
+        meta_lines.append('  <metadata name="Application">BambuStudio-02.00.02.01</metadata>')
         meta_lines.append('  <metadata name="BambuStudio:3mfVersion">1</metadata>')
 
     # Bambu adds xmlns:BambuStudio in its own exports. It doesn't hurt to include.
