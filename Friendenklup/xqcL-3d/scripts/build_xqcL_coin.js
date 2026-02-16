@@ -65,6 +65,7 @@ function buildCoinMesh({
   reliefHeightMM = 1.6,
   rimWidthMM = 2.2,
   rimHeightMM = 0.8,
+  rimBlendMM = 0.8, // soften the step between relief and rim
   segments = 256,
   rings = 128,
   emojiScale = 0.82, // fraction of inner diameter used for mapping the emoji
@@ -73,6 +74,10 @@ function buildCoinMesh({
 }) {
   const R = diameterMM / 2;
   const innerR = Math.max(0, R - rimWidthMM);
+  const rimZ = baseThicknessMM + rimHeightMM;
+
+  const smoothstep = (t) => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
 
   const V = [];     // vertices [x,y,z]
   const VT = [];    // uvs [u,v] for OBJ
@@ -115,20 +120,25 @@ function buildCoinMesh({
       let zTop = baseThicknessMM;
       let u, v;
 
+      // UVs for both rim + relief
+      u = 0.5 + (x / (2 * innerR * emojiScale));
+      v = 0.5 - (y / (2 * innerR * emojiScale));
+
+      const [r, g, b, a] = sampleRGBA_bilinear(img, u, v);
+      const lum = luminance(r, g, b);
+      const relief = a * Math.max(minReliefMM, Math.pow(lum, reliefGamma) * reliefHeightMM);
+      const reliefZ = baseThicknessMM + relief;
+
       if (rr >= innerR && rimWidthMM > 0) {
-        // Rim area: keep it clean and flat, slightly raised.
-        zTop = baseThicknessMM + rimHeightMM;
-        // UVs still set reasonably.
-        u = 0.5 + (x / (2 * innerR * emojiScale));
-        v = 0.5 - (y / (2 * innerR * emojiScale));
+        // Rim area: clean and flat.
+        zTop = rimZ;
+      } else if (rimBlendMM > 0 && rr >= innerR - rimBlendMM && rimWidthMM > 0) {
+        // Blend zone: soften the transition.
+        const t = smoothstep((rr - (innerR - rimBlendMM)) / rimBlendMM);
+        zTop = lerp(reliefZ, rimZ, t);
       } else {
         // Emoji relief area.
-        u = 0.5 + (x / (2 * innerR * emojiScale));
-        v = 0.5 - (y / (2 * innerR * emojiScale));
-        const [r, g, b, a] = sampleRGBA_bilinear(img, u, v);
-        const lum = luminance(r, g, b);
-        const relief = a * Math.max(minReliefMM, Math.pow(lum, reliefGamma) * reliefHeightMM);
-        zTop = baseThicknessMM + relief;
+        zTop = reliefZ;
       }
 
       topIndex[ri][si] = pushV(x, y, zTop);

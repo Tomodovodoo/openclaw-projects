@@ -20,7 +20,7 @@ npm run inspect:coin
 ## What this does (practical method we implemented)
 
 We download the emoji PNG from Discord’s CDN and generate a **coin**:
-- circular base + rim (watertight)
+- circular base + rim (watertight) + a small blend zone so the rim transition isn’t razor-sharp
 - **embossed relief** derived from the emoji’s **luminance** (for facial detail) and **alpha** (for clean edges)
 - also emits a **textured OBJ** so the *colors are exactly the emoji* in 3D viewers
 
