@@ -17,10 +17,29 @@ npm run build
 npm run inspect:coin
 # optional: multi-part color print assets (best for AMS/MMU)
 npm run build:parts
-# single-file *colored* 3MF for Bambu P1S + AMS (open in Bambu Studio)
+# single-file 3MFs for Bambu P1S + AMS (open in Bambu Studio)
 npm run build:p1s
-# output: output/xqcL_coin_P1S_AMS_colored.3mf
+# outputs:
+#   output/xqcL_coin_P1S_AMS_BambuProject.3mf      (best: avoids the “not from bambu lab” warning; sets per-part extruders)
+#   output/xqcL_coin_P1S_AMS_colored.3mf           (generic colored 3MF; 4 separate build items)
+#   output/xqcL_coin_P1S_AMS_colored_assembly.3mf  (generic colored 3MF; single build item via components)
 ```
+
+## 3MF color encoding note (why Bambu Studio shows colors)
+
+The generated 3MF uses the 3MF Material Extension **colorgroup** and assigns
+colors on **each triangle** (`pid` + `p1/p2/p3`). This is the most reliable way
+we found to make Bambu Studio import the file as **multi-color / multi-part**.
+
+If Bambu Studio shows the warning:
+> "The 3mf file is not from bambu lab, load geometry data only"
+
+…use the Bambu project variant (it includes Bambu metadata + `model_settings.config` so parts load as multiple extruders):
+- `xqcL_coin_P1S_AMS_BambuProject.3mf`
+
+If your slicer still imports as a single material, try the generic variants:
+- `xqcL_coin_P1S_AMS_colored.3mf` (4 separate build items)
+- `xqcL_coin_P1S_AMS_colored_assembly.3mf` (single build item via components)
 
 ## What this does (practical method we implemented)
 
