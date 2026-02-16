@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-import json
+"""Build a *colored* 3MF that Bambu Studio will actually display as multi-color.
+
+Important: Bambu Studio’s importer (see bbs_3mf.cpp) recognizes colors via:
+- <m:colorgroup id=...><m:color color="#RRGGBB"/></m:colorgroup>
+- per-object pid/pindex (or per-triangle pid/p1/p2/p3)
+
+It does NOT reliably use the 3MF Materials Extension <basematerials> for coloring.
+
+This script packages our watertight STL parts into a single 3MF with an assembly object.
+"""
+
 import os
 import struct
 import zipfile
@@ -7,13 +17,22 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "output" / "xqcL_coin_P1S_AMS.3mf"
+OUT = ROOT / "output" / "xqcL_coin_P1S_AMS_colored.3mf"
 PARTS_DIR = ROOT / "output" / "print_parts"
-PALETTE_JSON = PARTS_DIR / "palette.json"
 
-NS = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
-RELNS = "http://schemas.openxmlformats.org/package/2006/relationships"
-CTNS = "http://schemas.openxmlformats.org/package/2006/content-types"
+# Filament colors requested (approximate display colors)
+COLORS = {
+    "black": "#000000",
+    "white": "#FFFFFF",
+    "red":   "#D40000",
+    "wood":  "#C8A06A",
+}
+
+# 3MF namespaces
+NS_CORE = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+NS_M    = "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"  # prefix m
+NS_REL  = "http://schemas.openxmlformats.org/package/2006/relationships"
+NS_CT   = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 
 def read_binary_stl(path: Path):
@@ -42,21 +61,16 @@ def stl_to_indexed_mesh(tris, round_decimals=6):
         return (round(p[0], round_decimals), round(p[1], round_decimals), round(p[2], round_decimals))
 
     for (a, b, c) in tris:
-        ia = vmap.get(key(a))
+        ka, kb, kc = key(a), key(b), key(c)
+        ia = vmap.get(ka)
         if ia is None:
-            ia = len(vertices)
-            vmap[key(a)] = ia
-            vertices.append(a)
-        ib = vmap.get(key(b))
+            ia = len(vertices); vmap[ka] = ia; vertices.append(a)
+        ib = vmap.get(kb)
         if ib is None:
-            ib = len(vertices)
-            vmap[key(b)] = ib
-            vertices.append(b)
-        ic = vmap.get(key(c))
+            ib = len(vertices); vmap[kb] = ib; vertices.append(b)
+        ic = vmap.get(kc)
         if ic is None:
-            ic = len(vertices)
-            vmap[key(c)] = ic
-            vertices.append(c)
+            ic = len(vertices); vmap[kc] = ic; vertices.append(c)
         triangles.append((ia, ib, ic))
 
     return vertices, triangles
@@ -64,7 +78,7 @@ def stl_to_indexed_mesh(tris, round_decimals=6):
 
 def content_types_xml():
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<Types xmlns="{CTNS}">
+<Types xmlns="{NS_CT}">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
 </Types>
@@ -73,52 +87,60 @@ def content_types_xml():
 
 def rels_xml():
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="{RELNS}">
+<Relationships xmlns="{NS_REL}">
   <Relationship Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model"/>
 </Relationships>
 '''
 
 
-def model_xml(objects, basemats):
-    # basemats: list of dict {name, color}
-    # objects: list of dict {id, name, vertices, triangles, mat_index}
-
-    bm_lines = [f'  <basematerials id="1">']
-    for bm in basemats:
-        name = escape(bm["name"])
-        color = bm["color"]
-        bm_lines.append(f'    <base name="{name}" displaycolor="{color}"/>')
-    bm_lines.append('  </basematerials>')
+def model_xml(objects, assembly_object_id: int):
+    # Color group id=1 with 4 color entries.
+    colorgroup = [
+        f'  <m:colorgroup id="1">',
+        f'    <m:color color="{COLORS["black"]}"/>',
+        f'    <m:color color="{COLORS["white"]}"/>',
+        f'    <m:color color="{COLORS["red"]}"/>',
+        f'    <m:color color="{COLORS["wood"]}"/>',
+        f'  </m:colorgroup>',
+    ]
 
     res_lines = ['<resources>']
-    res_lines.extend(bm_lines)
+    res_lines.extend(colorgroup)
 
+    # Part objects with pid/pindex so Bambu can color them.
     for obj in objects:
-        res_lines.append(f'  <object id="{obj["id"]}" name="{escape(obj["name"])}" type="model">')
+        res_lines.append(
+            f'  <object id="{obj["id"]}" name="{escape(obj["name"])}" type="model" pid="1" pindex="{obj["pindex"]}">'  # pid=1 -> colorgroup id 1
+        )
         res_lines.append('    <mesh>')
         res_lines.append('      <vertices>')
         for (x, y, z) in obj["vertices"]:
             res_lines.append(f'        <vertex x="{x:.6f}" y="{y:.6f}" z="{z:.6f}"/>')
         res_lines.append('      </vertices>')
         res_lines.append('      <triangles>')
-        mi = obj["mat_index"]
         for (v1, v2, v3) in obj["triangles"]:
-            # assign material by setting p1/p2/p3 to same base material index
-            res_lines.append(f'        <triangle v1="{v1}" v2="{v2}" v3="{v3}" pid="1" p1="{mi}" p2="{mi}" p3="{mi}"/>')
+            # No need to set pid/p1/p2/p3 per-triangle: importer will fallback to object pid/pindex.
+            res_lines.append(f'        <triangle v1="{v1}" v2="{v2}" v3="{v3}"/>')
         res_lines.append('      </triangles>')
         res_lines.append('    </mesh>')
         res_lines.append('  </object>')
 
+    # Assembly object grouping the parts into one model item.
+    res_lines.append(f'  <object id="{assembly_object_id}" name="xqcL_coin" type="model">')
+    res_lines.append('    <components>')
+    for obj in objects:
+        res_lines.append(f'      <component objectid="{obj["id"]}"/>')
+    res_lines.append('    </components>')
+    res_lines.append('  </object>')
+
     res_lines.append('</resources>')
 
     build_lines = ['<build>']
-    for obj in objects:
-        # identity transform
-        build_lines.append(f'  <item objectid="{obj["id"]}"/>')
+    build_lines.append(f'  <item objectid="{assembly_object_id}"/>')
     build_lines.append('</build>')
 
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<model xmlns="{NS}" unit="millimeter">
+<model xmlns="{NS_CORE}" xmlns:m="{NS_M}" unit="millimeter">
 {os.linesep.join(res_lines)}
 {os.linesep.join(build_lines)}
 </model>
@@ -126,41 +148,20 @@ def model_xml(objects, basemats):
 
 
 def main():
-    PARTS_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Ensure parts exist
-    required = [
-        PARTS_DIR / "xqcL_coin_base_60mm.stl",
-        PARTS_DIR / "xqcL_coin_color_0.stl",
-        PARTS_DIR / "xqcL_coin_color_1.stl",
-        PARTS_DIR / "xqcL_coin_color_2.stl",
-        PARTS_DIR / "xqcL_coin_color_3.stl",
-        PALETTE_JSON,
-    ]
-    missing = [str(p) for p in required if not p.exists()]
-    if missing:
-        raise SystemExit("Missing required files; run `npm run build:parts` first. Missing: " + ", ".join(missing))
-
-    palette = json.loads(PALETTE_JSON.read_text("utf-8"))
-    pal = palette["palette"]
-
-    # Base material list: 4 palette colors + a neutral base
-    basemats = []
-    for i, c in enumerate(pal):
-        basemats.append({"name": f"color_{i}", "color": c["hex"]})
-    basemats.append({"name": "base", "color": "#D0D0D0"})
-
     parts = [
-        ("base", PARTS_DIR / "xqcL_coin_base_60mm.stl", 4),
-        ("color_0", PARTS_DIR / "xqcL_coin_color_0.stl", 0),
-        ("color_1", PARTS_DIR / "xqcL_coin_color_1.stl", 1),
-        ("color_2", PARTS_DIR / "xqcL_coin_color_2.stl", 2),
-        ("color_3", PARTS_DIR / "xqcL_coin_color_3.stl", 3),
+        ("base_black", PARTS_DIR / "xqcL_coin_base_60mm.stl", 0),
+        ("inlay_white", PARTS_DIR / "xqcL_coin_inlay_white.stl", 1),
+        ("inlay_red",   PARTS_DIR / "xqcL_coin_inlay_red.stl",   2),
+        ("inlay_wood",  PARTS_DIR / "xqcL_coin_inlay_wood.stl",  3),
     ]
+
+    missing = [str(p) for _, p, _ in parts if not p.exists()]
+    if missing:
+        raise SystemExit("Missing required STL parts; run `npm run build:parts` first. Missing: " + ", ".join(missing))
 
     objects = []
     next_id = 2
-    for name, stl_path, mat_index in parts:
+    for name, stl_path, pindex in parts:
         tris = read_binary_stl(stl_path)
         verts, tri_idx = stl_to_indexed_mesh(tris)
         objects.append({
@@ -168,11 +169,12 @@ def main():
             "name": name,
             "vertices": verts,
             "triangles": tri_idx,
-            "mat_index": mat_index,
+            "pindex": pindex,
         })
         next_id += 1
 
-    model = model_xml(objects, basemats)
+    assembly_object_id = next_id
+    model = model_xml(objects, assembly_object_id)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     if OUT.exists():

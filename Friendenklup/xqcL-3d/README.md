@@ -17,8 +17,9 @@ npm run build
 npm run inspect:coin
 # optional: multi-part color print assets (best for AMS/MMU)
 npm run build:parts
-# single-file 3MF for Bambu P1S + AMS (upload/open in Bambu Studio)
+# single-file *colored* 3MF for Bambu P1S + AMS (open in Bambu Studio)
 npm run build:p1s
+# output: output/xqcL_coin_P1S_AMS_colored.3mf
 ```
 
 ## What this does (practical method we implemented)
@@ -35,11 +36,13 @@ This is fast, deterministic, and works without Blender.
 **Best practical path today:** import **multi-part** STLs and assign colors by part (AMS/MMU).
 
 After running `npm run build:parts` you get:
-- `output/print_parts/xqcL_coin_base_60mm.stl`
-- `output/print_parts/xqcL_coin_color_0.stl` … `xqcL_coin_color_3.stl`
-- `output/print_parts/palette.json` (the computed palette)
+- `output/print_parts/xqcL_coin_base_60mm.stl` (intended filament: **black**)
+- `output/print_parts/xqcL_coin_inlay_white.stl`
+- `output/print_parts/xqcL_coin_inlay_red.stl`
+- `output/print_parts/xqcL_coin_inlay_wood.stl`
+- `output/print_parts/palette.json`
 
-The color parts are generated as **constant-height inlays** (watertight solids). Your relief/detail is in the single-material coin STL; the multi-part set is for **spot-color printing** (AMS/MMU).
+The inlays are generated as **constant-height** watertight solids. Relief/detail is in the single-material coin STL; the inlays are for **spot-color printing** (AMS/MMU).
 
 In Bambu Studio / PrusaSlicer:
 1) Import the base STL

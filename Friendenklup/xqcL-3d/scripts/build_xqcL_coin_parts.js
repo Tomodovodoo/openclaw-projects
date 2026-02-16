@@ -378,9 +378,9 @@ async function main() {
   const emojiScale = 0.82;
   const reliefGamma = 1.15;
 
-  // Grid resolution for segmentation parts
-  const W = 160;
-  const H = 160;
+  // Grid resolution for segmentation parts (higher = less pixelation)
+  const W = 320;
+  const H = 320;
   const innerDiameter = innerR * 2;
   const px = innerDiameter / W;
   const originX = -innerR;
@@ -389,33 +389,17 @@ async function main() {
   const alphaCut = 0.08;
   const circleCut = 0.995; // keep within circle
 
-  // Gather sample points for k-means
-  const points = [];
-  for (let y = 0; y < H; y += 2) {
-    for (let x = 0; x < W; x += 2) {
-      const cx = originX + (x + 0.5) * px;
-      const cy = originY + (y + 0.5) * px;
-      const rr = Math.hypot(cx, cy);
-      if (rr > innerR * circleCut) continue;
-      const u = 0.5 + (cx / (2 * innerR * emojiScale));
-      const v = 0.5 - (cy / (2 * innerR * emojiScale));
-      const [r, g, b, a] = sampleRGBA_bilinear(img, u, v);
-      if (a < alphaCut) continue;
-      points.push([r, g, b]);
-    }
-  }
+  // Fixed “AMS-friendly” palette (requested): black / white / red / wood.
+  // We do *rule-based* classification for stability instead of k-means.
+  const palette = [
+    { name: 'black', hex: '#000000' },
+    { name: 'white', hex: '#FFFFFF' },
+    { name: 'red',   hex: '#D40000' },
+    { name: 'wood',  hex: '#C8A06A' }
+  ];
+  fs.writeFileSync(OUT_PALETTE, JSON.stringify({ palette }, null, 2) + '\n');
 
-  const K = 4;
-  const centers = kmeansDeterministic(points, K, 10);
-
-  // Save palette
-  const palette = centers
-    .map((c) => ({ hex: rgbToHex(c), rgb01: c }))
-    .sort((a, b) => luminance(...a.rgb01) - luminance(...b.rgb01));
-
-  fs.writeFileSync(OUT_PALETTE, JSON.stringify({ K, palette }, null, 2) + '\n');
-
-  // Build per-pixel classification (we output constant-height color parts for watertightness)
+  // Build per-pixel classification (constant-height inlays for watertightness)
   const classIdx = new Uint8Array(W * H);
   const inside = new Uint8Array(W * H);
 
@@ -438,30 +422,44 @@ async function main() {
         continue;
       }
       inside[y * W + x] = 1;
-      const ci = nearestCenterIndex([r, g, b], centers);
+
+      const lum = luminance(r, g, b);
+      const isRed = (r > 0.45) && (r > g + 0.12) && (r > b + 0.12) && (lum > 0.10);
+
+      // Class mapping:
+      // 0=black, 1=white, 2=red, 3=wood
+      let ci = 3; // wood default
+      if (isRed) ci = 2;
+      else if (lum > 0.72) ci = 1;
+      else if (lum < 0.20) ci = 0;
       classIdx[y * W + x] = ci;
     }
   }
 
-  // Base coin (single piece)
+  // Base coin (single piece). Intended filament: BLACK.
   const baseMesh = buildBaseCoinSTL({ diameterMM, baseThicknessMM, rimWidthMM, rimHeightMM, segments: 256 });
-  writeBinarySTL(baseMesh, OUT_BASE, 'xqcL coin base 60mm');
+  writeBinarySTL(baseMesh, OUT_BASE, 'xqcL coin base 60mm (black)');
 
-  // Color parts: one STL per class
-  for (let c = 0; c < K; c++) {
+  const overlayHeightMM = 0.65;
+  const heightsTopConst = new Float32Array(W * H);
+  for (let i = 0; i < heightsTopConst.length; i++) heightsTopConst[i] = baseThicknessMM + overlayHeightMM;
+
+  // Inlays only (we *do not* generate a black inlay; black is the exposed base).
+  const inlays = [
+    { cls: 1, name: 'white' },
+    { cls: 2, name: 'red' },
+    { cls: 3, name: 'wood' },
+  ];
+
+  for (const { cls, name } of inlays) {
     const mask = new Uint8Array(W * H);
     for (let i = 0; i < mask.length; i++) {
-      mask[i] = inside[i] && classIdx[i] === c ? 1 : 0;
+      mask[i] = inside[i] && classIdx[i] === cls ? 1 : 0;
     }
-    // Clean up mask to avoid non-manifold “diagonal kissing” edges + tiny specks.
     removeIsolated(mask, W, H);
     breakDiagonalContacts(mask, W, H);
 
-    const out = path.join(OUT_DIR, `xqcL_coin_color_${c}.stl`);
-    const overlayHeightMM = 0.65;
-    const heightsTopConst = new Float32Array(W * H);
-    for (let i = 0; i < heightsTopConst.length; i++) heightsTopConst[i] = baseThicknessMM + overlayHeightMM;
-
+    const out = path.join(OUT_DIR, `xqcL_coin_inlay_${name}.stl`);
     voxelPartSTL({
       mask,
       heightsTop: heightsTopConst,
@@ -472,13 +470,13 @@ async function main() {
       originY,
       zBottom: baseThicknessMM,
       outPath: out,
-      header: `xqcL coin color part ${c}`,
+      header: `xqcL coin inlay ${name}`,
     });
   }
 
   console.log(`Wrote base: ${OUT_BASE}`);
   console.log(`Wrote palette: ${OUT_PALETTE}`);
-  console.log(`Wrote ${K} color part STLs to ${OUT_DIR}`);
+  console.log(`Wrote inlay STLs (white/red/wood) to ${OUT_DIR}`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
