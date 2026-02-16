@@ -17,6 +17,8 @@ npm run build
 npm run inspect:coin
 # optional: multi-part color print assets (best for AMS/MMU)
 npm run build:parts
+# single-file 3MF for Bambu P1S + AMS (upload/open in Bambu Studio)
+npm run build:p1s
 ```
 
 ## What this does (practical method we implemented)
