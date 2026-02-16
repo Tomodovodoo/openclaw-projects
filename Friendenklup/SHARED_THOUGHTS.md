@@ -17,4 +17,4 @@
 - none
 
 ## Next Steps
-- Create subfolders as tasks arrive.
+- Improve xqcL coin generator output + publish print-ready STL + textured preview.

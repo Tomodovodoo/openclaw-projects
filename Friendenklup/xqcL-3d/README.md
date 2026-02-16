@@ -4,7 +4,9 @@ This folder contains a reproducible pipeline to turn the Discord **xqcL** custom
 
 ## Output
 
-- `output/xqcL_relief_60mm.stl` — bas-relief (heightmap) generated from the emoji alpha mask.
+- `output/xqcL_coin_60mm.stl` — **3D printable coin** (circular, rim, embossed bas‑relief derived from emoji luminance + alpha).
+- `output/xqcL_coin_textured.obj` + `output/xqcL_coin_textured.mtl` — textured render/preview model using the original emoji PNG.
+- `output/xqcL_relief_60mm.stl` — legacy square bas‑relief from alpha only.
 
 ## Generate
 
@@ -12,14 +14,15 @@ This folder contains a reproducible pipeline to turn the Discord **xqcL** custom
 cd Friendenklup/xqcL-3d
 npm install
 npm run build
+npm run inspect:coin
 ```
 
 ## What this does (practical method we implemented)
 
-We download the emoji PNG from Discord’s CDN and convert **alpha → height** to create a 3D *bas‑relief*:
-- transparent pixels → 0 height
-- opaque pixels → max relief height
-- adds a solid base + side walls → watertight solid STL
+We download the emoji PNG from Discord’s CDN and generate a **coin**:
+- circular base + rim (watertight)
+- **embossed relief** derived from the emoji’s **luminance** (for facial detail) and **alpha** (for clean edges)
+- also emits a **textured OBJ** so the *colors are exactly the emoji* in 3D viewers
 
 This is fast, deterministic, and works without Blender.
 
