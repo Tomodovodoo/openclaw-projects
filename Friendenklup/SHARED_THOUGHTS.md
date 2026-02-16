@@ -2,6 +2,7 @@
 
 ## Current Objective
 - Maintain guild-routed project workspace for Friendenklup.
+- Create and publish a 3D-printable STL for the xqcL emoji.
 
 ## Architecture Snapshot
 - Root: /home/server/openclaw-projects/Friendenklup

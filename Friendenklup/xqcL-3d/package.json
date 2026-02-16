@@ -1,0 +1,11 @@
+{
+  "name": "xqcl-3d",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build_xqcL_stl.js"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  }
+}
