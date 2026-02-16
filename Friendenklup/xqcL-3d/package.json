@@ -6,7 +6,8 @@
     "build": "npm run build:coin && npm run build:relief",
     "build:coin": "node scripts/build_xqcL_coin.js",
     "build:relief": "node scripts/build_xqcL_stl.js",
-    "inspect:coin": "node scripts/inspect_stl.js output/xqcL_coin_60mm.stl"
+    "inspect:coin": "node scripts/inspect_stl.js output/xqcL_coin_60mm.stl",
+    "build:parts": "node scripts/build_xqcL_coin_parts.js"
   },
   "dependencies": {
     "pngjs": "^7.0.0"

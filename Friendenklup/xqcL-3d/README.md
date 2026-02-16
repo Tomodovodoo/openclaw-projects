@@ -15,6 +15,8 @@ cd Friendenklup/xqcL-3d
 npm install
 npm run build
 npm run inspect:coin
+# optional: multi-part color print assets (best for AMS/MMU)
+npm run build:parts
 ```
 
 ## What this does (practical method we implemented)
@@ -25,6 +27,24 @@ We download the emoji PNG from Discord’s CDN and generate a **coin**:
 - also emits a **textured OBJ** so the *colors are exactly the emoji* in 3D viewers
 
 This is fast, deterministic, and works without Blender.
+
+## Multicolor printing (recommended modern approach)
+
+**Best practical path today:** import **multi-part** STLs and assign colors by part (AMS/MMU).
+
+After running `npm run build:parts` you get:
+- `output/print_parts/xqcL_coin_base_60mm.stl`
+- `output/print_parts/xqcL_coin_color_0.stl` … `xqcL_coin_color_3.stl`
+- `output/print_parts/palette.json` (the computed palette)
+
+The color parts are generated as **constant-height inlays** (watertight solids). Your relief/detail is in the single-material coin STL; the multi-part set is for **spot-color printing** (AMS/MMU).
+
+In Bambu Studio / PrusaSlicer:
+1) Import the base STL
+2) Import the color STLs as **parts of the same object** (merge)
+3) Assign a filament to each part
+
+This avoids relying on textured-model import support (which is still inconsistent).
 
 ## Modern alternatives (if you want a full 3D “figurine” model)
 
