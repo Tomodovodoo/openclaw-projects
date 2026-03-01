@@ -1,0 +1,19 @@
+{
+  "model_id": "ibm-granite/granite-4.0-1b-base",
+  "model_url": "https://huggingface.co/ibm-granite/granite-4.0-1b-base",
+  "created_at": "2025-10-07T20:24:47.000Z",
+  "last_modified": "2025-10-23T09:39:21.000Z",
+  "release_date_from_card": "October 28, 2025",
+  "pipeline_tag": "text-generation",
+  "license_tags": [
+    "license:apache-2.0"
+  ],
+  "parameter_billions_estimate": 1.0,
+  "checks": {
+    "is_recent_within_6_months_by_created_at": true,
+    "in_param_range_0_6_to_6_billion": true,
+    "looks_like_base_or_general_model": true
+  },
+  "recent_cutoff_utc": "2025-08-30T21:59:45.575760+00:00",
+  "evaluated_at_utc": "2026-03-01T21:59:45.575760+00:00"
+}

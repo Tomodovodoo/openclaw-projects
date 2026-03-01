@@ -1,0 +1,17 @@
+{
+  "dataset": "data/blindspots_dataset.jsonl",
+  "record_count": 10,
+  "unique_categories": 10,
+  "required_fields": [
+    "id",
+    "category",
+    "input",
+    "expected_output",
+    "model_output",
+    "notes"
+  ],
+  "min_records": 10,
+  "min_categories": 8,
+  "status": "ok",
+  "errors": []
+}

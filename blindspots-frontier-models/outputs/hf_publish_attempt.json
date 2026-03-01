@@ -1,0 +1,9 @@
+{
+  "attempted_at_utc": "2026-03-01T23:24:29.940384+00:00",
+  "dataset_file": "data/blindspots_dataset.jsonl",
+  "dataset_readme": "data/README.md",
+  "repo_id": "Tomodovodoo/blindspots-frontier-models-granite-4-0-1b-base",
+  "resolved_repo_id": "Tomodovodoo/blindspots-frontier-models-granite-4-0-1b-base",
+  "status": "success",
+  "url": "https://huggingface.co/datasets/Tomodovodoo/blindspots-frontier-models-granite-4-0-1b-base"
+}

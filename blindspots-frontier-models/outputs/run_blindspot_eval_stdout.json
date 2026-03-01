@@ -1,0 +1,27 @@
+{
+  "status": "ok",
+  "provider": "huggingface_transformers",
+  "model_id": "ibm-granite/granite-4.0-1b-base",
+  "prompt_count": 10,
+  "dataset_row_count": 10,
+  "dataset_mode": "all",
+  "failure_count": 8,
+  "success_count": 2,
+  "failure_rate": 0.8,
+  "failure_ids": [
+    "Q1",
+    "Q2",
+    "Q4",
+    "Q5",
+    "Q7",
+    "Q8",
+    "Q9",
+    "Q10"
+  ],
+  "success_ids": [
+    "Q3",
+    "Q6"
+  ],
+  "device": "cpu",
+  "max_new_tokens": 80
+}
