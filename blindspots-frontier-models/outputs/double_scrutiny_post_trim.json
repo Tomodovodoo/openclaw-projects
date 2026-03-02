@@ -1,0 +1,10 @@
+{
+  "row_count": 10,
+  "issue_count": 0,
+  "issues": [],
+  "model_ids": [
+    "ibm-granite/granite-4.0-1b-base"
+  ],
+  "branch": "main",
+  "upstream": "origin/main"
+}
